@@ -1,0 +1,11 @@
+pandas
+numpy
+dask
+scipy
+plotly
+matplotlib
+scikit-learn
+scikit-image
+Pillow
+opencv-python-headless
+imgkit
