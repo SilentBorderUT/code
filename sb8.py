@@ -149,6 +149,74 @@ def save_figure(fig, filename):
     filepath = os.path.join(folder, filename)
     # Save the figure as an HTML file
     pio.write_html(fig, file=filepath)
+def angle_between_vectors(vector1, vector2):
+    unit_vector1 = vector1 / np.linalg.norm(vector1)
+    unit_vector2 = vector2 / np.linalg.norm(vector2)
+    dot_product = np.dot(unit_vector1, unit_vector2)
+    angle_rad = np.arccos(dot_product)
+    angle_deg = np.degrees(angle_rad)
+    return angle_deg
+def stop_program():
+    global stop_flag
+    stop_flag = True
+def bind_stop_key():
+    keyboard.on_press_key('s', lambda _: stop_program())
+def select_points_for_straight_line(data):
+    z_values = data[:, 2]
+    x_values = data[:, 0]
+    y_values = data[:, 1]
+    diff_indices = np.where((np.sqrt(np.diff(x_values)**2)+np.sqrt(np.diff(y_values)**2)+np.sqrt(np.diff(z_values)**2)) > 8)[0] + 1
+    first_array = data[:diff_indices[0]]
+    second_array = data[diff_indices[0]:diff_indices[1]]
+    third_array = data[diff_indices[1]:]
+    def fit_line_ransac(points):
+        X = points[:, 0].reshape(-1, 1)
+        y = points[:, 1]
+        model = RANSACRegressor()
+        model.fit(X, y)
+        slope = model.estimator_.coef_[0]
+        intercept = model.estimator_.intercept_
+        return slope, intercept
+    combinations = list(itertools.product(first_array, second_array, third_array))
+    best_slope = None
+    best_intercept = None
+    best_residual = float('inf')
+    for combination in combinations:
+        points = np.array(combination)
+        slope, intercept = fit_line_ransac(points)
+        residual = np.sum(np.abs(slope * points[:, 0] + intercept - points[:, 1]))
+        if residual < best_residual:
+            best_slope = slope
+            best_intercept = intercept
+            best_residual = residual
+    new_array = []
+    for points in combination:
+        new_array.append([points[0], best_slope * points[0] + best_intercept, points[2]])
+    return (new_array)
+def diff(line):
+    x = line[:,0]
+    y = line[:,1]
+    z = line[:,2]
+    distances = np.sqrt(np.diff(z)**2)+np.sqrt(np.diff(x)**2)+np.sqrt(np.diff(y)**2)
+    return distances
+def correct(array, n):
+    count = 0
+    for value in array:
+        if value > n:
+            count += 1
+            if count > 1:
+                return True
+    return False
+def select_incoming_outgoing(x_coords, y_coords, z_coords):
+    distances = np.sqrt(np.diff(x_coords)**2 + np.diff(y_coords)**2 + np.diff(z_coords)**2)
+    change_index = np.argmax(distances)
+    incoming_x = x_coords[:change_index+1]
+    incoming_y = y_coords[:change_index+1]
+    incoming_z = z_coords[:change_index+1]
+    outgoing_x = x_coords[change_index+1:]
+    outgoing_y = y_coords[change_index+1:]
+    outgoing_z = z_coords[change_index+1:]
+    return (incoming_x, incoming_y, incoming_z), (outgoing_x, outgoing_y, outgoing_z)
 
 def closest_approach(line1, line2):
     def objective(s):
