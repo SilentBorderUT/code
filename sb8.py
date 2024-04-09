@@ -258,12 +258,23 @@ def calculate_min_distances(set1, set2):
         min_distance = np.min(distances)
         closest_index = np.argmin(distances)
         # Adjust signs based on relative positions in x, y, z
-        x = -((point1[0] - set2[closest_index][0])**2) if point1[0] < set2[closest_index][0] else ((point1[0] - set2[closest_index][0])**2)
-        y = -((point1[1] - set2[closest_index][1])**2) if point1[1] < set2[closest_index][1] else ((point1[1] - set2[closest_index][1])**2)
-        z = -((point1[2] - set2[closest_index][2])**2) if point1[2] < set2[closest_index][2] else ((point1[2] - set2[closest_index][2])**2)
-        a = x + y + z
-        # Determine sign of min_distance based on the sign of 'a'
-        min_distances.append(-min_distance if a < 0 else min_distance)
+        if point1[0]< set2[closest_index][0]:
+            x=-((point1[0]-set2[closest_index][0])**2)
+        else:
+            x=((point1[0]-set2[closest_index][0])**2)
+        if point1[1]< set2[closest_index][1]:
+            y=-((point1[1]-set2[closest_index][1])**2)
+        else:
+            y=((point1[1]-set2[closest_index][1])**2)
+        if point1[2]< set2[closest_index][2]:
+            z=-((point1[2]-set2[closest_index][2])**2)
+        else:
+            z=((point1[2]-set2[closest_index][2])**2)
+        a = x+y+z
+        if a < 0:
+            min_distances.append(-min_distance)
+        else :
+            min_distances.append(min_distance)
         closest_indices.append(closest_index)
     # Calculate average point error
     average_point_error = np.mean(min_distances)
@@ -383,22 +394,52 @@ def process_event(event_data, event_id, combined_grid):
                     if diffin == True and diffout == True:
                         # Attempt to straighten the lines by selecting key points
                         incoming_line = select_points_for_straight_line(incoming_line)
-                        outgoing_line = select_points_for_straight_line(outgoing_line)
-
-                        # Create a corrected path combining both lines and identifying key control points
-                        control_points, point, poca_in, poca_out = create_correct_path(incoming_line, outgoing_line)
-
-                        # Extract coordinates and hit types for points passing the mask filter
+                        outgoing_line = select_points_for_straight_line(outgoing_line)               
+                        control_points, point,poca_in,poca_out = create_correct_path(incoming_line, outgoing_line)
                         x_coords = x_coords[mask]
                         y_coords = y_coords[mask]
                         z_coords = z_coords[mask]
-                        hit_types = hit_types[mask]
+                        hit_types = hit_types[mask]                        
+                        x_coord = [v[0] for v in control_points]
+                        y_coord = [v[1] for v in control_points]
+                        z_coord = [v[2] for v in control_points]
+                        incoming_x_2 = [x_coord[1], x_coord[2]]
+                        incoming_y_2 = [y_coord[1], y_coord[2]]
+                        incoming_z_2 = [z_coord[1], z_coord[2]]
+                        x_34 = [x_coord[2], x_coord[3]]
+                        y_34 = [y_coord[2], y_coord[3]]
+                        z_34 = [z_coord[2], z_coord[3]]
+                        x_45 = [x_coord[3], x_coord[4]]
+                        y_45 = [y_coord[3], y_coord[4]]
+                        z_45 = [z_coord[3], z_coord[4]]
+                        x_23_45 = [x_coord[1], x_coord[2], x_coord[3], x_coord[4]]
+                        y_23_45 = [y_coord[1], y_coord[2], y_coord[3], y_coord[4]]
+                        z_23_45 = [z_coord[1], z_coord[2], z_coord[3], z_coord[4]]
+                        x_23_34_45 = [x_coord[1], x_coord[2], x_coord[2], x_coord[3],  x_coord[3], x_coord[4]]
+                        y_23_34_45 = [y_coord[1], y_coord[2], y_coord[2], y_coord[3],  y_coord[3], y_coord[4]]
+                        z_23_34_45 = [z_coord[1], z_coord[2], z_coord[2], z_coord[3],  z_coord[3], z_coord[4]]
+                        points = np.array([x_coord, y_coord, z_coord]).T
+                        unique_points = np.unique(points, axis=0)
+                        weights = np.ones(len(unique_points))
+                        x_transport = x_coords1[mask2]
+                        y_transport = y_coords1[mask2]
+                        z_transport = z_coords1[mask2]
+                        transport = np.array([x_transport, y_transport, z_transport]).T
+                        a_34 = np.array([x_34, y_34, z_34]).T
 
-                        # Process the control points to prepare for ray simulation
-                        # The code here extracts specific segments and points from the control points for analysis
-
-                        # Example for one segment: Calculate the angle between incoming segments to assess direction change
+                        x1_in, y1_in, z1_in = control_points[0]
+                        x2_in, y2_in, z2_in = control_points[1]
+                        x3_in, y3_in, z3_in = control_points[2]
+                        x_poca, y_poca, z_poca = control_points[3]
+                        x4_out, y4_out, z4_out = control_points[4]
+                        x5_out, y5_out, z5_out = control_points[5]
+                        x6_out, y6_out, z6_out = control_points[6]
                         angle_123 = angle_between_vectors([x2_in - x1_in, y2_in - y1_in, z2_in - z1_in], [x3_in - x2_in, y3_in - y2_in, z3_in - z2_in])
+                        angle_234 = angle_between_vectors([x3_in - x2_in, y3_in - y2_in, z3_in - z2_in], [x4_out - x3_in, y4_out - y3_in, z4_out - z3_in])
+                        angle_345 = angle_between_vectors([x4_out - x3_in, y4_out - y3_in, z4_out - z3_in], [x5_out - x4_out, y5_out - y4_out, z5_out - z4_out])
+                        angle_456 = angle_between_vectors([x5_out - x4_out, y5_out - y4_out, z5_out - z4_out], [x6_out - x5_out, y6_out - y5_out, z6_out - z5_out])
+                        angle_3poca4 = angle_between_vectors([x_poca - x3_in, y_poca - y3_in, z_poca - z3_in], [x4_out - x_poca, y4_out - y_poca, z4_out - z_poca])
+                        
 
                         # Break the loop if a certain angle criterion is met (angle_234 > 1)
                         if angle_234 > 1:
